@@ -26,6 +26,8 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -55,7 +57,6 @@ namespace Mono.Linker
 
 		readonly Pipeline _pipeline;
 		readonly Dictionary<string, AssemblyAction> _actions;
-		string _outputDirectory;
 		readonly Dictionary<string, string> _parameters;
 		bool _linkSymbols;
 		bool _keepTypeForwarderOnlyAssemblies;
@@ -65,8 +66,7 @@ namespace Mono.Linker
 		readonly AssemblyResolver _resolver;
 		readonly TypeNameResolver _typeNameResolver;
 
-		ISymbolReaderProvider _symbolReaderProvider;
-		ISymbolWriterProvider _symbolWriterProvider;
+		ISymbolReaderProvider? _symbolReaderProvider;
 
 		readonly AnnotationStore _annotations;
 		readonly CustomAttributeSource _customAttributes;
@@ -89,10 +89,7 @@ namespace Mono.Linker
 
 		public int ErrorsCount { get; private set; }
 
-		public string OutputDirectory {
-			get { return _outputDirectory; }
-			set { _outputDirectory = value; }
-		}
+		public string? OutputDirectory { get; set; }
 
 		public MetadataTrimming MetadataTrimming { get; set; }
 
@@ -139,11 +136,11 @@ namespace Mono.Linker
 
 		public Dictionary<string, bool> FeatureSettings { get; init; }
 
-		public List<string> AttributeDefinitions { get; private set; }
+		public List<string>? AttributeDefinitions { get; private set; }
 
 		public List<PInvokeInfo> PInvokes { get; private set; }
 
-		public string PInvokesListFile;
+		public string? PInvokesListFile;
 
 		public bool StripSecurity { get; set; }
 
@@ -159,15 +156,12 @@ namespace Mono.Linker
 			get { return _typeNameResolver; }
 		}
 
-		public ISymbolReaderProvider SymbolReaderProvider {
+		public ISymbolReaderProvider? SymbolReaderProvider {
 			get { return _symbolReaderProvider; }
 			set { _symbolReaderProvider = value; }
 		}
 
-		public ISymbolWriterProvider SymbolWriterProvider {
-			get { return _symbolWriterProvider; }
-			set { _symbolWriterProvider = value; }
-		}
+		public ISymbolWriterProvider? SymbolWriterProvider { get; set; }
 
 		public bool LogMessages { get; set; }
 
@@ -175,7 +169,7 @@ namespace Mono.Linker
 
 		public KnownMembers MarkedKnownMembers { get; private set; }
 
-		public WarningSuppressionWriter WarningSuppressionWriter { get; set; }
+		public WarningSuppressionWriter? WarningSuppressionWriter { get; set; }
 
 		public HashSet<int> NoWarn { get; set; }
 
@@ -195,7 +189,7 @@ namespace Mono.Linker
 
 		public bool AddReflectionAnnotations { get; set; }
 
-		public string AssemblyListFile { get; set; }
+		public string? AssemblyListFile { get; set; }
 
 		public List<IMarkHandler> MarkHandlers { get; }
 
@@ -284,7 +278,7 @@ namespace Mono.Linker
 			AttributeDefinitions.Add (file);
 		}
 
-		public TypeDefinition GetType (string fullName)
+		public TypeDefinition? GetType (string fullName)
 		{
 			int pos = fullName.IndexOf (",");
 			fullName = TypeReferenceExtensions.ToCecilName (fullName);
@@ -478,7 +472,7 @@ namespace Mono.Linker
 			return asms;
 		}
 
-		public AssemblyDefinition GetLoadedAssembly (string name)
+		public AssemblyDefinition? GetLoadedAssembly (string name)
 		{
 			if (!string.IsNullOrEmpty (name) && _resolver.AssemblyCache.TryGetValue (name, out var ad))
 				return ad;
@@ -522,7 +516,7 @@ namespace Mono.Linker
 			return _parameters.ContainsKey (key);
 		}
 
-		public bool TryGetCustomData (string key, out string value)
+		public bool TryGetCustomData (string key, out string? value)
 		{
 			return _parameters.TryGetValue (key, out value);
 		}
@@ -559,7 +553,8 @@ namespace Mono.Linker
 
 			if (WarningSuppressionWriter != null &&
 				(message.Category == MessageCategory.Warning || message.Category == MessageCategory.WarningAsError) &&
-				message.Origin?.MemberDefinition != null)
+				message.Origin?.MemberDefinition != null &&
+				message.Code != null)
 				WarningSuppressionWriter.AddWarning (message.Code.Value, message.Origin?.MemberDefinition);
 
 			if (message.Category == MessageCategory.Error || message.Category == MessageCategory.WarningAsError)
@@ -708,11 +703,11 @@ namespace Mono.Linker
 			return _targetRuntime.Value;
 		}
 
-		readonly Dictionary<MethodReference, MethodDefinition> methodresolveCache = new ();
-		readonly Dictionary<FieldReference, FieldDefinition> fieldresolveCache = new ();
-		readonly Dictionary<TypeReference, TypeDefinition> typeresolveCache = new ();
+		readonly Dictionary<MethodReference, MethodDefinition?> methodresolveCache = new ();
+		readonly Dictionary<FieldReference, FieldDefinition?> fieldresolveCache = new ();
+		readonly Dictionary<TypeReference, TypeDefinition?> typeresolveCache = new ();
 
-		public MethodDefinition Resolve (MethodReference methodReference)
+		public MethodDefinition? Resolve (MethodReference methodReference)
 		{
 			if (methodReference is MethodDefinition md)
 				return md;
@@ -720,23 +715,23 @@ namespace Mono.Linker
 			if (methodReference is null)
 				return null;
 
-			if (methodresolveCache.TryGetValue (methodReference, out md)) {
-				if (md == null && !IgnoreUnresolved)
+			if (methodresolveCache.TryGetValue (methodReference, out var methodDef)) {
+				if (methodDef == null && !IgnoreUnresolved)
 					ReportUnresolved (methodReference);
 
-				return md;
+				return methodDef;
 			}
 
-			md = methodReference.Resolve ();
-			if (md == null && !IgnoreUnresolved) {
+			methodDef = methodReference.Resolve ();
+			if (methodDef == null && !IgnoreUnresolved) {
 				ReportUnresolved (methodReference);
 			}
 
-			methodresolveCache.Add (methodReference, md);
-			return md;
+			methodresolveCache.Add (methodReference, methodDef);
+			return methodDef;
 		}
 
-		public MethodDefinition TryResolve (MethodReference methodReference)
+		public MethodDefinition? TryResolve (MethodReference methodReference)
 		{
 			if (methodReference is MethodDefinition md)
 				return md;
@@ -744,15 +739,15 @@ namespace Mono.Linker
 			if (methodReference is null)
 				return null;
 
-			if (methodresolveCache.TryGetValue (methodReference, out md))
-				return md;
+			if (methodresolveCache.TryGetValue (methodReference, out var methodDef))
+				return methodDef;
 
-			md = methodReference.Resolve ();
-			methodresolveCache.Add (methodReference, md);
-			return md;
+			methodDef = methodReference.Resolve ();
+			methodresolveCache.Add (methodReference, methodDef);
+			return methodDef;
 		}
 
-		public FieldDefinition Resolve (FieldReference fieldReference)
+		public FieldDefinition? Resolve (FieldReference fieldReference)
 		{
 			if (fieldReference is FieldDefinition fd)
 				return fd;
@@ -760,23 +755,23 @@ namespace Mono.Linker
 			if (fieldReference is null)
 				return null;
 
-			if (fieldresolveCache.TryGetValue (fieldReference, out fd)) {
-				if (fd == null && !IgnoreUnresolved)
+			if (fieldresolveCache.TryGetValue (fieldReference, out var fieldDef)) {
+				if (fieldDef == null && !IgnoreUnresolved)
 					ReportUnresolved (fieldReference);
 
-				return fd;
+				return fieldDef;
 			}
 
-			fd = fieldReference.Resolve ();
-			if (fd == null && !IgnoreUnresolved) {
+			fieldDef = fieldReference.Resolve ();
+			if (fieldDef == null && !IgnoreUnresolved) {
 				ReportUnresolved (fieldReference);
 			}
 
-			fieldresolveCache.Add (fieldReference, fd);
-			return fd;
+			fieldresolveCache.Add (fieldReference, fieldDef);
+			return fieldDef;
 		}
 
-		public FieldDefinition TryResolve (FieldReference fieldReference)
+		public FieldDefinition? TryResolve (FieldReference fieldReference)
 		{
 			if (fieldReference is FieldDefinition fd)
 				return fd;
@@ -784,15 +779,15 @@ namespace Mono.Linker
 			if (fieldReference is null)
 				return null;
 
-			if (fieldresolveCache.TryGetValue (fieldReference, out fd))
-				return fd;
+			if (fieldresolveCache.TryGetValue (fieldReference, out var fieldDef))
+				return fieldDef;
 
-			fd = fieldReference.Resolve ();
-			fieldresolveCache.Add (fieldReference, fd);
-			return fd;
+			fieldDef = fieldReference.Resolve ();
+			fieldresolveCache.Add (fieldReference, fieldDef);
+			return fieldDef;
 		}
 
-		public TypeDefinition Resolve (TypeReference typeReference)
+		public TypeDefinition? Resolve (TypeReference typeReference)
 		{
 			if (typeReference is TypeDefinition td)
 				return td;
@@ -800,11 +795,11 @@ namespace Mono.Linker
 			if (typeReference is null)
 				return null;
 
-			if (typeresolveCache.TryGetValue (typeReference, out td)) {
-				if (td == null && !IgnoreUnresolved)
+			if (typeresolveCache.TryGetValue (typeReference, out var typeDef)) {
+				if (typeDef == null && !IgnoreUnresolved)
 					ReportUnresolved (typeReference);
 
-				return td;
+				return typeDef;
 			}
 
 			//
@@ -813,16 +808,16 @@ namespace Mono.Linker
 			if (typeReference is GenericParameter || (typeReference is TypeSpecification && typeReference is not GenericInstanceType))
 				throw new NotSupportedException ($"TypeDefinition cannot be resolved from '{typeReference.GetType ()}' type");
 
-			td = typeReference.Resolve ();
-			if (td == null && !IgnoreUnresolved) {
+			typeDef = typeReference.Resolve ();
+			if (typeDef == null && !IgnoreUnresolved) {
 				ReportUnresolved (typeReference);
 			}
 
-			typeresolveCache.Add (typeReference, td);
-			return td;
+			typeresolveCache.Add (typeReference, typeDef);
+			return typeDef;
 		}
 
-		public TypeDefinition TryResolve (TypeReference typeReference)
+		public TypeDefinition? TryResolve (TypeReference typeReference)
 		{
 			if (typeReference is TypeDefinition td)
 				return td;
@@ -830,27 +825,27 @@ namespace Mono.Linker
 			if (typeReference is null || typeReference is GenericParameter)
 				return null;
 
-			if (typeresolveCache.TryGetValue (typeReference, out td))
-				return td;
+			if (typeresolveCache.TryGetValue (typeReference, out var typeDef))
+				return typeDef;
 
 			if (typeReference is TypeSpecification ts) {
 				if (typeReference is FunctionPointerType) {
-					td = null;
+					typeDef = null;
 				} else {
 					//
 					// It returns element-type for arrays and also element type for wrapping types like ByReference, PinnedType, etc
 					//
-					td = TryResolve (ts.GetElementType ());
+					typeDef = TryResolve (ts.GetElementType ());
 				}
 			} else {
-				td = typeReference.Resolve ();
+				typeDef = typeReference.Resolve ();
 			}
 
-			typeresolveCache.Add (typeReference, td);
-			return td;
+			typeresolveCache.Add (typeReference, typeDef);
+			return typeDef;
 		}
 
-		public TypeDefinition TryResolve (AssemblyDefinition assembly, string typeNameString)
+		public TypeDefinition? TryResolve (AssemblyDefinition assembly, string typeNameString)
 		{
 			// It could be cached if it shows up on fast path
 			return TryResolve (_typeNameResolver.ResolveTypeName (assembly, typeNameString));
@@ -900,12 +895,12 @@ namespace Mono.Linker
 
 		public CodeOptimizations Global { get; private set; }
 
-		internal bool IsEnabled (CodeOptimizations optimizations, AssemblyDefinition context)
+		internal bool IsEnabled (CodeOptimizations optimizations, AssemblyDefinition? context)
 		{
 			return IsEnabled (optimizations, context?.Name.Name);
 		}
 
-		public bool IsEnabled (CodeOptimizations optimizations, string assemblyName)
+		public bool IsEnabled (CodeOptimizations optimizations, string? assemblyName)
 		{
 			// Only one bit is set
 			Debug.Assert (optimizations != 0 && (optimizations & (optimizations - 1)) == 0);
@@ -919,7 +914,7 @@ namespace Mono.Linker
 			return (Global & optimizations) != 0;
 		}
 
-		public void Enable (CodeOptimizations optimizations, string assemblyContext = null)
+		public void Enable (CodeOptimizations optimizations, string? assemblyContext = null)
 		{
 			if (assemblyContext == null) {
 				Global |= optimizations;
@@ -935,7 +930,7 @@ namespace Mono.Linker
 			assemblySetting.Values |= optimizations;
 		}
 
-		public void Disable (CodeOptimizations optimizations, string assemblyContext = null)
+		public void Disable (CodeOptimizations optimizations, string? assemblyContext = null)
 		{
 			if (assemblyContext == null) {
 				Global &= ~optimizations;
