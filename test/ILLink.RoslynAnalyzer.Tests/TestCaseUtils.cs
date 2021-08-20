@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -13,6 +14,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
+using Mono.Linker.Tests.Cases.Expectations.Metadata;
 using Xunit;
 
 namespace ILLink.RoslynAnalyzer.Tests
@@ -48,16 +50,32 @@ namespace ILLink.RoslynAnalyzer.Tests
 							yield return new object[] { m, attrs };
 						}
 					}
+					if (node is AccessorDeclarationSyntax a) {
+						var attrs = a.AttributeLists.SelectMany (al => al.Attributes.Where (IsWellKnown)).ToList ();
+						if (attrs.Count > 0) {
+							yield return new object[] { a, attrs };
+						}
+					}
 				}
 
 				static bool IsWellKnown (AttributeSyntax attr)
 				{
 					switch (attr.Name.ToString ()) {
-					// Currently, the analyzer's test infra only understands these attributes when placed on methods.
+					// Currently, the analyzer's test infra only understands these attributes when placed on methods and properties.
 					case "ExpectedWarning":
 					case "LogContains":
 					case "LogDoesNotContain":
-						return attr.Ancestors ().OfType<MemberDeclarationSyntax> ().First ().IsKind (SyntaxKind.MethodDeclaration);
+						var ancestor = attr.Ancestors ().OfType<MemberDeclarationSyntax> ().First ();
+						switch (ancestor.Kind())
+						{
+							case SyntaxKind.MethodDeclaration:
+							case SyntaxKind.PropertyDeclaration:
+							case SyntaxKind.GetAccessorDeclaration:
+							case SyntaxKind.SetAccessorDeclaration:
+								return true;
+							default:
+								return false;
+						}
 
 					case "UnrecognizedReflectionAccessPattern":
 						return true;
@@ -68,11 +86,36 @@ namespace ILLink.RoslynAnalyzer.Tests
 			}
 		}
 
-		public static void RunTest<TAnalyzer> (MemberDeclarationSyntax m, List<AttributeSyntax> attrs, params (string, string)[] MSBuildProperties)
+		public static async ValueTask<Compilation> CreateCompilation (SyntaxTree tree, IEnumerable<MetadataReference>? additionalReferences = null)
+		{
+			var mdRef = MetadataReference.CreateFromFile (typeof (BaseMetadataAttribute).Assembly.Location);
+			var references = new List<MetadataReference> ();
+			references.AddRange(await GetNet6References ());
+			references.Add(mdRef);
+			if (additionalReferences is not null)
+			{
+				references.AddRange(additionalReferences);
+			}
+			var comp = CSharpCompilation.Create (
+				assemblyName: Guid.NewGuid ().ToString ("N"),
+				syntaxTrees: new SyntaxTree[] { tree },
+				references: references,
+				new CSharpCompilationOptions (OutputKind.DynamicallyLinkedLibrary));
+
+			return comp;
+		}
+
+		public static ValueTask<Compilation> CreateCompilation (string source, IEnumerable<MetadataReference>? additionalReferences = null)
+			=> CreateCompilation(SyntaxFactory.ParseSyntaxTree(source), additionalReferences);
+
+		public static void RunTest<TAnalyzer> (SyntaxNode m, List<AttributeSyntax> attrs, params (string, string)[] MSBuildProperties)
+			where TAnalyzer : DiagnosticAnalyzer, new() => RunTest<TAnalyzer> (m, attrs, null, MSBuildProperties);
+
+		public static void RunTest<TAnalyzer> (SyntaxNode m, List<AttributeSyntax> attrs, IEnumerable<MetadataReference>? additionalReferences = null, params (string, string)[] MSBuildProperties)
 			where TAnalyzer : DiagnosticAnalyzer, new()
 		{
 			var test = new TestChecker (m, CSharpAnalyzerVerifier<TAnalyzer>
-				.CreateCompilation (m.SyntaxTree.GetRoot ().SyntaxTree, MSBuildProperties).Result);
+				.CreateCompilationWithAnalyzers (m.SyntaxTree.GetRoot ().SyntaxTree, MSBuildProperties, additionalReferences).Result);
 			test.ValidateAttributes (attrs);
 		}
 
@@ -93,6 +136,38 @@ namespace ILLink.RoslynAnalyzer.Tests
 			}
 
 			return builder.ToImmutable ();
+		}
+
+		public static ImmutableDictionary<string, List<string>> GetReferenceFilesByDirName ()
+		{
+			var builder = ImmutableDictionary.CreateBuilder<string, List<string>> ();
+
+			foreach (var file in GetReferenceFiles ()) {
+				var dirName = Path.GetFileName (Path.GetDirectoryName (file))!;
+				if (builder.TryGetValue (dirName, out var sources)) {
+					sources.Add (file);
+				} else {
+					sources = new List<string> () { file };
+					builder[dirName] = sources;
+				}
+			}
+
+			return builder.ToImmutable ();
+		}
+
+		public static IEnumerable<string> GetReferenceFiles ()
+		{
+			GetDirectoryPaths (out var rootSourceDir, out _);
+
+			foreach (var subDir in Directory.EnumerateDirectories (rootSourceDir, "*", SearchOption.AllDirectories)) {
+				var subDirName = Path.GetFileName (subDir);
+				switch (subDirName) {
+				case "Dependencies":
+					foreach (var file in Directory.EnumerateFiles (subDir, "*.cs"))
+						yield return file;
+					break;
+				}
+			}
 		}
 
 		public static void GetDirectoryPaths (out string rootSourceDirectory, out string testAssemblyPath)

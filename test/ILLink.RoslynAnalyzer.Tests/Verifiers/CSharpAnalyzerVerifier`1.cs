@@ -34,27 +34,18 @@ namespace ILLink.RoslynAnalyzer.Tests
 		public static DiagnosticResult Diagnostic (DiagnosticDescriptor descriptor)
 			=> CSharpAnalyzerVerifier<TAnalyzer, XUnitVerifier>.Diagnostic (descriptor);
 
-		public static Task<(CompilationWithAnalyzers Compilation, SemanticModel SemanticModel)> CreateCompilation (
+		public static ValueTask<(CompilationWithAnalyzers Compilation, SemanticModel SemanticModel)> CreateCompilationWithAnalyzers (
 			string src,
 			(string, string)[]? globalAnalyzerOptions = null,
 			IEnumerable<MetadataReference>? additionalReferences = null)
-			=> CreateCompilation (CSharpSyntaxTree.ParseText (src), globalAnalyzerOptions, additionalReferences);
+			=> CreateCompilationWithAnalyzers (CSharpSyntaxTree.ParseText (src), globalAnalyzerOptions, additionalReferences);
 
-		public static async Task<Compilation> GetCompilation (string source, IEnumerable<MetadataReference>? additionalReferences = null)
-			=> (await CSharpAnalyzerVerifier<RequiresAssemblyFilesAnalyzer>.CreateCompilation (source, additionalReferences: additionalReferences ?? Array.Empty<MetadataReference> ())).Compilation.Compilation;
-
-		public static async Task<(CompilationWithAnalyzers Compilation, SemanticModel SemanticModel)> CreateCompilation (
+		public static async ValueTask<(CompilationWithAnalyzers Compilation, SemanticModel SemanticModel)> CreateCompilationWithAnalyzers (
 			SyntaxTree src,
 			(string, string)[]? globalAnalyzerOptions = null,
 			IEnumerable<MetadataReference>? additionalReferences = null)
 		{
-			var mdRef = MetadataReference.CreateFromFile (typeof (Mono.Linker.Tests.Cases.Expectations.Metadata.BaseMetadataAttribute).Assembly.Location);
-			additionalReferences ??= Array.Empty<MetadataReference> ();
-			var comp = CSharpCompilation.Create (
-				assemblyName: Guid.NewGuid ().ToString ("N"),
-				syntaxTrees: new SyntaxTree[] { src },
-				references: (await TestCaseUtils.GetNet6References ()).Add (mdRef).AddRange (additionalReferences),
-				new CSharpCompilationOptions (OutputKind.DynamicallyLinkedLibrary));
+			var comp = await TestCaseUtils.CreateCompilation(src, additionalReferences);
 
 			var analyzerOptions = new AnalyzerOptions (
 				ImmutableArray<AdditionalText>.Empty,
@@ -73,7 +64,7 @@ namespace ILLink.RoslynAnalyzer.Tests
 		/// <inheritdoc cref="AnalyzerVerifier{TAnalyzer, TTest, TVerifier}.VerifyAnalyzerAsync(string, DiagnosticResult[])"/>
 		public static async Task VerifyAnalyzerAsync (string src, (string, string)[]? analyzerOptions = null, IEnumerable<MetadataReference>? additionalReferences = null, params DiagnosticResult[] expected)
 		{
-			var diags = await (await CreateCompilation (src, analyzerOptions, additionalReferences)).Compilation.GetAllDiagnosticsAsync ();
+			var diags = await (await CreateCompilationWithAnalyzers (src, analyzerOptions, additionalReferences)).Compilation.GetAllDiagnosticsAsync ();
 
 			var analyzers = ImmutableArray.Create<DiagnosticAnalyzer> (new TAnalyzer ());
 			VerifyDiagnosticResults (diags, analyzers, expected, DefaultVerifier);

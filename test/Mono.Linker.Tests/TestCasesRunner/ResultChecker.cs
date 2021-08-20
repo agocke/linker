@@ -663,6 +663,13 @@ namespace Mono.Linker.Tests.TestCasesRunner
 			}
 		}
 
+		bool IsProducedByLinker (CustomAttribute attr)
+		{
+			var propertyObject = attr.GetPropertyValue ("ProducedBy");
+			ProducedBy diagnosticProducedBy = propertyObject is null ? ProducedBy.LinkerAndAnalyzer : (ProducedBy) propertyObject;
+			return diagnosticProducedBy.HasFlag (ProducedBy.Linker);
+		}
+
 		IEnumerable<(ICustomAttributeProvider Provider, CustomAttribute Attribute)> GetAttributes (AssemblyDefinition assembly)
 		{
 			foreach (var testType in assembly.AllDefinedTypes ()) {
@@ -686,6 +693,8 @@ namespace Mono.Linker.Tests.TestCasesRunner
 			List<MessageContainer> loggedMessages = logger.GetLoggedMessages ();
 			List<(IMemberDefinition, CustomAttribute)> expectedNoWarningsAttributes = new List<(IMemberDefinition, CustomAttribute)> ();
 			foreach (var (attrProvider, attr) in GetAttributes (original)) {
+				if (!IsProducedByLinker (attr))
+					break;
 				switch (attr.AttributeType.Name) {
 
 				case nameof (LogContainsAttribute): {

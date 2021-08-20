@@ -2,7 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
+using System.IO;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
@@ -13,20 +16,27 @@ namespace ILLink.RoslynAnalyzer.Tests
 	/// </summary>
 	public class LinkerTestCases : TestCaseUtils
 	{
-		[Theory]
-		[MemberData (nameof (TestCaseUtils.GetTestData), parameters: nameof (RequiresCapability))]
-		public void RequiresCapability (MethodDeclarationSyntax m, List<AttributeSyntax> attrs)
-		{
-			switch (m.Identifier.ValueText) {
-			// There is a discrepancy between the way linker and the analyzer represent the location of the error,
-			// linker will point to the method caller and the analyzer will point to a line of code.
-			// The TestTypeIsBeforeFieldInit scenario is supported by the analyzer, just the diagnostic message is different
-			// We verify the analyzer generating the right diagnostic in RequiresUnreferencedCodeAnalyzerTests.cs
-			case "TestTypeIsBeforeFieldInit":
-				return;
-			}
+		private static Lazy<IEnumerable<MetadataReference>> _additionalReferences = new Lazy<IEnumerable<MetadataReference>> (LoadDependencies);
 
-			RunTest<RequiresUnreferencedCodeAnalyzer> (m, attrs, UseMSBuildProperties (MSBuildPropertyOptionNames.EnableTrimAnalyzer));
+		private static IEnumerable<MetadataReference> LoadDependencies ()
+		{
+			List<MetadataReference> additionalReferences = new List<MetadataReference> ();
+			var s_refFiles = GetReferenceFilesByDirName ();
+			foreach (var refFile in s_refFiles["Dependencies"]) {
+				if (refFile.Contains ("RequiresCapability"))
+					additionalReferences.Add (TestCaseUtils.CreateCompilation (File.ReadAllText (refFile)).Result.EmitToImageReference ());
+			}
+			return additionalReferences;
 		}
+
+		[Theory]
+		[MemberData (nameof (TestCaseUtils.GetTestData), parameters: "RequiresCapability")]
+		public void RequiresUnreferencedCodeCapability (SyntaxNode m, List<AttributeSyntax> attrs) =>
+			RunTest<RequiresUnreferencedCodeAnalyzer> (m, attrs, _additionalReferences.Value, UseMSBuildProperties (MSBuildPropertyOptionNames.EnableTrimAnalyzer));
+
+		[Theory]
+		[MemberData (nameof (TestCaseUtils.GetTestData), parameters: "RequiresCapability")]
+		public void RequiresAssemblyFilesCapability (SyntaxNode m, List<AttributeSyntax> attrs) =>
+			RunTest<RequiresAssemblyFilesAnalyzer> (m, attrs, _additionalReferences.Value, UseMSBuildProperties (MSBuildPropertyOptionNames.EnableSingleFileAnalyzer));
 	}
 }

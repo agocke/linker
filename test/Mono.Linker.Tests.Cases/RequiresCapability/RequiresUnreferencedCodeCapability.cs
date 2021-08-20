@@ -37,10 +37,10 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 	[ExpectedNoWarnings]
 	public class RequiresUnreferencedCodeCapability
 	{
-		[ExpectedWarning ("IL2026", "--IDerivedInterface.MethodInDerivedInterface--", GlobalAnalysisOnly = true)]
-		[ExpectedWarning ("IL2026", "--DynamicallyAccessedTypeWithRequiresUnreferencedCode.RequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
-		[ExpectedWarning ("IL2026", "--BaseType.VirtualMethodRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
-		[ExpectedWarning ("IL2026", "--IBaseInterface.MethodInBaseInterface--", GlobalAnalysisOnly = true)]
+		[ExpectedWarning ("IL2026", "--IDerivedInterface.MethodInDerivedInterface--", ProducedBy = ProducedBy.Linker)]
+		[ExpectedWarning ("IL2026", "--DynamicallyAccessedTypeWithRequiresUnreferencedCode.RequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
+		[ExpectedWarning ("IL2026", "--BaseType.VirtualMethodRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
+		[ExpectedWarning ("IL2026", "--IBaseInterface.MethodInBaseInterface--", ProducedBy = ProducedBy.Linker)]
 		public static void Main ()
 		{
 			TestRequiresWithMessageOnlyOnMethod ();
@@ -252,7 +252,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 
 		// The second attribute is added through link attribute XML
 		[RequiresUnreferencedCode ("Message for --MethodWithDuplicateRequiresAttribute--")]
-		[ExpectedWarning ("IL2027", "RequiresUnreferencedCodeAttribute", nameof (MethodWithDuplicateRequiresAttribute), GlobalAnalysisOnly = true)]
+		[ExpectedWarning ("IL2027", "RequiresUnreferencedCodeAttribute", nameof (MethodWithDuplicateRequiresAttribute), ProducedBy = ProducedBy.Linker)]
 		static void MethodWithDuplicateRequiresAttribute ()
 		{
 		}
@@ -262,7 +262,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 		{
 		}
 
-		[ExpectedWarning ("IL2026", "--RequiresUnreferencedCodeOnlyThroughReflection--", GlobalAnalysisOnly = true)]
+		[ExpectedWarning ("IL2026", "--RequiresUnreferencedCodeOnlyThroughReflection--", ProducedBy = ProducedBy.Linker)]
 		static void TestRequiresUnreferencedCodeOnlyThroughReflection ()
 		{
 			typeof (RequiresUnreferencedCodeCapability)
@@ -277,7 +277,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			{
 			}
 
-			[ExpectedWarning ("IL2026", "--GenericType.RequiresUnreferencedCodeOnlyThroughReflection--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--GenericType.RequiresUnreferencedCodeOnlyThroughReflection--", ProducedBy = ProducedBy.Linker)]
 			public static void Test ()
 			{
 				typeof (AccessedThroughReflectionOnGenericType<T>)
@@ -493,14 +493,14 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 		// Doesn't work in the analyzer because the test infra for analyzer will not build the second assembly
 		// and provide it as a ref assembly to the compilation - so the analyzer actually sees the below
 		// as errors (missing assembly).
-		[ExpectedWarning ("IL2026", "--Method--", GlobalAnalysisOnly = true)]
+		[ExpectedWarning ("IL2026", "--Method--", ProducedBy = ProducedBy.Linker)]
 		static void TestRequiresInMethodFromCopiedAssembly ()
 		{
 			var tmp = new RequiresUnreferencedCodeInCopyAssembly ();
 			tmp.Method ();
 		}
 
-		[ExpectedWarning ("IL2026", "--MethodCalledThroughReflection--", GlobalAnalysisOnly = true)]
+		[ExpectedWarning ("IL2026", "--MethodCalledThroughReflection--", ProducedBy = ProducedBy.Linker)]
 		static void TestRequiresThroughReflectionInMethodFromCopiedAssembly ()
 		{
 			typeof (RequiresUnreferencedCodeInCopyAssembly)
@@ -579,7 +579,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			}
 
 			// https://github.com/mono/linker/issues/2094 - should be supported by the analyzer
-			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", ProducedBy = ProducedBy.Linker)]
 			static void GenericMethodWithAttributedParameter<[AttributeWhichRequiresUnreferencedCode] T> () { }
 
 			static void TestRequiresOnAttributeOnGenericParameter ()
@@ -589,7 +589,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			}
 
 			// https://github.com/mono/linker/issues/2094 - should be supported by the analyzer
-			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", ProducedBy = ProducedBy.Linker)]
 			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeOnPropertyAttribute.PropertyWhichRequires--")]
 			[AttributeWhichRequiresUnreferencedCode]
 			[AttributeWhichRequiresUnreferencedCodeOnProperty (PropertyWhichRequires = true)]
@@ -598,7 +598,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			}
 
 			// https://github.com/mono/linker/issues/2094 - should be supported by the analyzer
-			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeAttribute.ctor--", ProducedBy = ProducedBy.Linker)]
 			[ExpectedWarning ("IL2026", "--AttributeWhichRequiresUnreferencedCodeOnPropertyAttribute.PropertyWhichRequires--")]
 			[AttributeWhichRequiresUnreferencedCode]
 			[AttributeWhichRequiresUnreferencedCodeOnProperty (PropertyWhichRequires = true)]
@@ -716,12 +716,12 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			}
 
 			// https://github.com/mono/linker/issues/2116
-			[ExpectedWarning ("IL2026", "--PInvokeReturnType.ctor--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--PInvokeReturnType.ctor--", ProducedBy = ProducedBy.Linker)]
 			[DllImport ("nonexistent")]
 			static extern PInvokeReturnType PInvokeReturnsType ();
 
 			// Analyzer doesn't support IL2050 yet
-			[ExpectedWarning ("IL2050", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2050", ProducedBy = ProducedBy.Linker)]
 			public static void Test ()
 			{
 				PInvokeReturnsType ();
@@ -762,7 +762,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			static void GenericMethod<T> () where T : new() { }
 
 			// https://github.com/mono/linker/issues/2117
-			[ExpectedWarning ("IL2026", "--NewConstrainTestType.ctor--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "--NewConstrainTestType.ctor--", ProducedBy = ProducedBy.Linker)]
 			public static void Test ()
 			{
 				GenericMethod<NewConstrainTestType> ();
@@ -957,13 +957,13 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				}
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
 			static void TestRequiresInClassAccessedByStaticMethod ()
 			{
 				ClassWithRequiresUnreferencedCode.StaticMethod ();
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode", "--ClassWithRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode", "--ClassWithRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
 			static void TestRequiresInClassAccessedByCctor ()
 			{
 				var classObject = new ClassWithRequiresUnreferencedCode ();
@@ -974,9 +974,9 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				ClassWithRequiresUnreferencedCode.NestedClass.NestedStaticMethod ();
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
 			// Although we suppress the warning from RequiresOnMethod.MethodWithRUC () we still get a warning because we call CallRUCMethod() which is an static method on a type with RUC
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.CallRUCMethod()", "--ClassWithRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.CallRUCMethod()", "--ClassWithRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
 			static void TestRequiresOnBaseButNotOnDerived ()
 			{
 				DerivedWithoutRequires.StaticMethodInInheritedClass ();
@@ -990,7 +990,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				DerivedWithoutRequires2.StaticMethod ();
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.DerivedWithRequires.StaticMethodInInheritedClass()", "--DerivedWithRequires--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.DerivedWithRequires.StaticMethodInInheritedClass()", "--DerivedWithRequires--", ProducedBy = ProducedBy.Linker)]
 			static void TestRequiresOnDerivedButNotOnBase ()
 			{
 				DerivedWithRequires.StaticMethodInInheritedClass ();
@@ -999,8 +999,8 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				DerivedWithRequires.NestedClass.NestedStaticMethod ();
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.DerivedWithRequires2.StaticMethodInInheritedClass()", "--DerivedWithRequires2--", GlobalAnalysisOnly = true)]
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.DerivedWithRequires2.StaticMethodInInheritedClass()", "--DerivedWithRequires2--", ProducedBy = ProducedBy.Linker)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.StaticMethod()", "--ClassWithRequiresUnreferencedCode--", ProducedBy = ProducedBy.Linker)]
 			static void TestRequiresOnBaseAndDerived ()
 			{
 				DerivedWithRequires2.StaticMethodInInheritedClass ();
@@ -1009,7 +1009,7 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 				DerivedWithRequires2.NestedClass.NestedStaticMethod ();
 			}
 
-			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.TestSuppressions(Type[])", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "RequiresOnClass.ClassWithRequiresUnreferencedCode.TestSuppressions(Type[])", ProducedBy = ProducedBy.Linker)]
 			static void TestSuppressionsOnClass ()
 			{
 				ClassWithRequiresUnreferencedCode.TestSuppressions (new[] { typeof (ClassWithRequiresUnreferencedCode) });
@@ -1021,10 +1021,10 @@ namespace Mono.Linker.Tests.Cases.RequiresCapability
 			}
 
 			// Analyzer still dont understand RUC on type
-			[ExpectedWarning ("IL2026", "BaseWithoutRequiresOnType.Method()", GlobalAnalysisOnly = true)]
-			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method(Int32)", GlobalAnalysisOnly = true)]
-			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method()", GlobalAnalysisOnly = true)]
-			[ExpectedWarning ("IL2026", "ImplementationWithRequiresOnType.Method()", GlobalAnalysisOnly = true)]
+			[ExpectedWarning ("IL2026", "BaseWithoutRequiresOnType.Method()", ProducedBy = ProducedBy.Linker)]
+			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method(Int32)", ProducedBy = ProducedBy.Linker)]
+			[ExpectedWarning ("IL2026", "InterfaceWithoutRequires.Method()", ProducedBy = ProducedBy.Linker)]
+			[ExpectedWarning ("IL2026", "ImplementationWithRequiresOnType.Method()", ProducedBy = ProducedBy.Linker)]
 			public static void Test ()
 			{
 				TestRequiresInClassAccessedByStaticMethod ();
