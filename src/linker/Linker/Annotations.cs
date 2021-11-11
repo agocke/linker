@@ -31,9 +31,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using ILLink;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Linker.Dataflow;
+using RequiresUnreferencedCodeAttribute = ILLink.RequiresUnreferencedCodeAttribute;
 
 namespace Mono.Linker
 {
@@ -580,38 +582,6 @@ namespace Mono.Linker
 			return linkerAttributeInformation.GetAttributes<T> ();
 		}
 
-		public bool TryGetLinkerAttribute<T> (IMemberDefinition member, [NotNullWhen (returnValue: true)] out T? attribute) where T : Attribute
-		{
-			var attributes = GetLinkerAttributes<T> (member);
-			if (attributes.Count () > 1) {
-				context.LogWarning ($"Attribute '{typeof (T).FullName}' should only be used once on '{((member is MemberReference memberRef) ? memberRef.GetDisplayName () : member.FullName)}'.", 2027, member);
-			}
-
-			attribute = attributes.FirstOrDefault ();
-			return attribute != null;
-		}
-
-		/// <summary>
-		/// Determines if method requires unreferenced code (and thus any usage of such method should be warned about).
-		/// </summary>
-		/// <remarks>Unlike <see cref="IsMethodInRequiresUnreferencedCodeScope(MethodDefinition)"/> only static methods 
-		/// and .ctors are reported as requiring unreferenced code when the declaring type has RUC on it.</remarks>
-		internal bool DoesMethodRequireUnreferencedCode (MethodDefinition method, [NotNullWhen (returnValue: true)] out RequiresUnreferencedCodeAttribute? attribute)
-		{
-			if (method.IsStaticConstructor ()) {
-				attribute = null;
-				return false;
-			}
-			if (TryGetLinkerAttribute (method, out attribute))
-				return true;
-
-			if ((method.IsStatic || method.IsConstructor) && method.DeclaringType is not null &&
-				TryGetLinkerAttribute (method.DeclaringType, out attribute))
-				return true;
-
-			return false;
-		}
-
 		/// <summary>
 		/// Determines if method is within a declared RUC scope - this typically means that trim analysis
 		/// warnings should be suppressed in such a method.
@@ -628,21 +598,21 @@ namespace Mono.Linker
 			return false;
 		}
 
-		internal bool DoesFieldRequireUnreferencedCode (FieldDefinition field, [NotNullWhen (returnValue: true)] out RequiresUnreferencedCodeAttribute? attribute)
+		internal bool DoesFieldRequireUnreferencedCode (FieldDefinition field, [NotNullWhen (returnValue: true)] out ILLink.RequiresUnreferencedCodeAttribute? attribute)
 		{
 			if (!field.IsStatic || field.DeclaringType is null) {
 				attribute = null;
 				return false;
 			}
 
-			return TryGetLinkerAttribute (field.DeclaringType, out attribute);
+			return context.AnalysisContext.TryGetLinkerAttribute (new TypeProxy(field.DeclaringType), out attribute);
 		}
 
-		internal bool DoesMemberRequireUnreferencedCode (IMemberDefinition member, [NotNullWhen (returnValue: true)] out RequiresUnreferencedCodeAttribute? attribute)
+		internal bool DoesMemberRequireUnreferencedCode (IMemberDefinition member, [NotNullWhen (returnValue: true)] out ILLink.RequiresUnreferencedCodeAttribute? attribute)
 		{
 			attribute = null;
 			return member switch {
-				MethodDefinition method => DoesMethodRequireUnreferencedCode (method, out attribute),
+				MethodDefinition method => context.AnalysisContext.DoesMethodRequireUnreferencedCode (new MethodProxy(method), out attribute),
 				FieldDefinition field => DoesFieldRequireUnreferencedCode (field, out attribute),
 				_ => false
 			};

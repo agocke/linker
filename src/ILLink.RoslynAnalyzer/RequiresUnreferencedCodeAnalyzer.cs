@@ -10,10 +10,12 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace ILLink.RoslynAnalyzer
 {
 	[DiagnosticAnalyzer (LanguageNames.CSharp)]
-	public sealed class RequiresUnreferencedCodeAnalyzer : RequiresAnalyzerBase
+	public sealed class RequiresUnreferencedCodeAnalyzer : RequiresAnalyzerBase<RequiresUnreferencedCodeAttribute>
 	{
 		const string RequiresUnreferencedCodeAttribute = nameof (RequiresUnreferencedCodeAttribute);
 		public const string FullyQualifiedRequiresUnreferencedCodeAttribute = "System.Diagnostics.CodeAnalysis." + RequiresUnreferencedCodeAttribute;
+
+		private protected override DiagnosticId RequiresDiagnosticId => DiagnosticId.RequiresUnreferencedCode;
 
 		static readonly DiagnosticDescriptor s_requiresUnreferencedCodeRule = DiagnosticDescriptors.GetDiagnosticDescriptor (DiagnosticId.RequiresUnreferencedCode);
 		static readonly DiagnosticDescriptor s_requiresUnreferencedCodeAttributeMismatch = DiagnosticDescriptors.GetDiagnosticDescriptor (DiagnosticId.RequiresUnreferencedCodeAttributeMismatch);
@@ -82,11 +84,5 @@ namespace ILLink.RoslynAnalyzer
 
 		protected override bool VerifyAttributeArguments (AttributeData attribute) =>
 			attribute.ConstructorArguments.Length >= 1 && attribute.ConstructorArguments[0] is { Type: { SpecialType: SpecialType.System_String } } ctorArg;
-
-		protected override string GetMessageFromAttribute (AttributeData? requiresAttribute)
-		{
-			var message = (string) requiresAttribute!.ConstructorArguments[0].Value!;
-			return MessageFormat.FormatRequiresAttributeMessageArg (message);
-		}
 	}
 }

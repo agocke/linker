@@ -31,6 +31,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using ILLink;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Linker.Steps;
@@ -184,6 +185,8 @@ namespace Mono.Linker
 
 		public SerializationMarker SerializationMarker { get; }
 
+		internal AnalysisContext AnalysisContext { get; }
+
 		public LinkContext (Pipeline pipeline, ILogger logger, string outputDirectory)
 		{
 			_pipeline = pipeline;
@@ -236,6 +239,8 @@ namespace Mono.Linker
 			DisableEventSourceSpecialHandling = true;
 
 			Optimizations = new CodeOptimizationsSettings (defaultOptimizations);
+
+			AnalysisContext = new AnalysisContext(this);
 		}
 
 		public void SetFeatureValue (string feature, bool value)

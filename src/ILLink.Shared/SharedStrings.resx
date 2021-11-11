@@ -123,6 +123,18 @@
   <data name="RequiresUnreferencedCodeMessage" xml:space="preserve">
     <value>Using member '{0}' which has 'RequiresUnreferencedCodeAttribute' can break functionality when trimming application code.{1}{2}</value>
   </data>
+  <data name="DuplicateLinkerAttributesTitle" xml:space="preserve">
+    <value>Only one linker attribute is expected on a target.</value>
+  </data>
+  <data name="DuplicateLinkerAttributesMessage" xml:space="preserve">
+    <value>Attribute '{0}' should only be used once on '{1}'."</value>
+  </data>
+  <data name="AttributeDefinitionMissingParametersTitle" xml:space="preserve">
+    <value>Trimming attribute definition does not have the correct number of parameters.</value>
+  </data>
+  <data name="AttributeDefinitionMissingParametersMessage" xml:space="preserve">
+    <value>Attribute '{0}' doesn't have the required number of parameters specified.</value>
+  </data>
   <data name="AvoidAssemblyLocationInSingleFileTitle" xml:space="preserve">
     <value>Avoid accessing Assembly file path when publishing as a single file</value>
   </data>

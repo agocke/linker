@@ -10,10 +10,12 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace ILLink.RoslynAnalyzer
 {
 	[DiagnosticAnalyzer (LanguageNames.CSharp)]
-	public sealed class RequiresAssemblyFilesAnalyzer : RequiresAnalyzerBase
+	public sealed class RequiresAssemblyFilesAnalyzer : RequiresAnalyzerBase<RequiresAssemblyFilesAttribute>
 	{
 		private const string RequiresAssemblyFilesAttribute = nameof (RequiresAssemblyFilesAttribute);
 		public const string RequiresAssemblyFilesAttributeFullyQualifiedName = "System.Diagnostics.CodeAnalysis." + RequiresAssemblyFilesAttribute;
+
+		private protected override DiagnosticId RequiresDiagnosticId => DiagnosticId.RequiresAssemblyFiles;
 
 		static readonly DiagnosticDescriptor s_locationRule = DiagnosticDescriptors.GetDiagnosticDescriptor (DiagnosticId.AvoidAssemblyLocationInSingleFile,
 			helpLinkUri: "https://docs.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/il3000");
@@ -89,16 +91,5 @@ namespace ILLink.RoslynAnalyzer
 
 		protected override bool VerifyAttributeArguments (AttributeData attribute) => attribute.ConstructorArguments.Length == 0 ||
 			attribute.ConstructorArguments.Length >= 1 && attribute.ConstructorArguments[0] is { Type: { SpecialType: SpecialType.System_String } } ctorArg;
-
-		protected override string GetMessageFromAttribute (AttributeData requiresAttribute)
-		{
-			string message = "";
-			if (requiresAttribute.ConstructorArguments.Length >= 1) {
-				message = requiresAttribute.ConstructorArguments[0].Value?.ToString () ?? "";
-				if (!string.IsNullOrEmpty (message))
-					message = $" {message}{(message!.TrimEnd ().EndsWith (".") ? "" : ".")}";
-			}
-			return message;
-		}
 	}
 }

@@ -4,9 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Mono.Cecil;
+using RequiresUnreferencedCodeAttribute = ILLink.RequiresUnreferencedCodeAttribute;
 
 namespace Mono.Linker
 {
@@ -90,17 +90,17 @@ namespace Mono.Linker
 				return null;
 
 			if (customAttribute.HasConstructorArguments && customAttribute.ConstructorArguments[0].Value is string message) {
-				var ruca = new RequiresUnreferencedCodeAttribute (message);
+				string? url = null;
 				if (customAttribute.HasProperties) {
 					foreach (var prop in customAttribute.Properties) {
 						if (prop.Name == "Url") {
-							ruca.Url = prop.Argument.Value as string;
+							url = prop.Argument.Value as string;
 							break;
 						}
 					}
 				}
 
-				return ruca;
+				return new RequiresUnreferencedCodeAttribute(message, url);
 			}
 
 			context.LogWarning (

@@ -4,6 +4,8 @@
 	{
 		// Linker diagnostic ids.
 		RequiresUnreferencedCode = 2026,
+		DuplicateLinkerAttributes = 2027,
+		AttributeDefinitionMissingParameters = 2028,
 		RequiresUnreferencedCodeAttributeMismatch = 2046,
 		CorrectnessOfCOMCannotBeGuaranteed = 2050,
 		MakeGenericType = 2055,

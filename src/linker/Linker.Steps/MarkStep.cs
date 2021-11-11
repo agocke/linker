@@ -34,11 +34,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection.Runtime.TypeParsing;
 using System.Text.RegularExpressions;
+using ILLink;
 using ILLink.Shared;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
 using Mono.Linker.Dataflow;
+using RequiresUnreferencedCodeAttribute = ILLink.RequiresUnreferencedCodeAttribute;
 
 namespace Mono.Linker.Steps
 {
@@ -1893,7 +1895,7 @@ namespace Mono.Linker.Steps
 
 			if (Context.TryResolve (type.BaseType) is TypeDefinition baseType &&
 				!Context.Annotations.HasLinkerAttribute<RequiresUnreferencedCodeAttribute> (type) &&
-				Context.Annotations.TryGetLinkerAttribute (baseType, out RequiresUnreferencedCodeAttribute? effectiveRequiresUnreferencedCode)) {
+				Context.AnalysisContext.TryGetLinkerAttribute (new TypeProxy(baseType), out RequiresUnreferencedCodeAttribute? effectiveRequiresUnreferencedCode)) {
 
 				var currentOrigin = ScopeStack.CurrentScope.Origin;
 
@@ -2976,13 +2978,13 @@ namespace Mono.Linker.Steps
 			if (ShouldSuppressAnalysisWarningsForRequiresUnreferencedCode ())
 				return;
 
-			if (!Annotations.DoesMethodRequireUnreferencedCode (method, out RequiresUnreferencedCodeAttribute? requiresUnreferencedCode))
+			if (!Context.AnalysisContext.DoesMethodRequireUnreferencedCode (new MethodProxy(method), out RequiresUnreferencedCodeAttribute? requiresUnreferencedCode))
 				return;
 
 			ReportRequiresUnreferencedCode (method.GetDisplayName (), requiresUnreferencedCode, ScopeStack.CurrentScope.Origin);
 		}
 
-		private void ReportRequiresUnreferencedCode (string displayName, RequiresUnreferencedCodeAttribute requiresUnreferencedCode, MessageOrigin currentOrigin)
+		private void ReportRequiresUnreferencedCode (string displayName, ILLink.RequiresUnreferencedCodeAttribute requiresUnreferencedCode, MessageOrigin currentOrigin)
 		{
 			string arg1 = MessageFormat.FormatRequiresAttributeMessageArg (requiresUnreferencedCode.Message);
 			string arg2 = MessageFormat.FormatRequiresAttributeUrlArg (requiresUnreferencedCode.Url);
@@ -3058,7 +3060,7 @@ namespace Mono.Linker.Steps
 			if (method.IsInstanceConstructor ()) {
 				MarkRequirementsForInstantiatedTypes (method.DeclaringType);
 				Tracer.AddDirectDependency (method.DeclaringType, new DependencyInfo (DependencyKind.InstantiatedByCtor, method), marked: false);
-			} else if (method.IsStaticConstructor () && Annotations.HasLinkerAttribute<RequiresUnreferencedCodeAttribute> (method))
+			} else if (method.IsStaticConstructor () && Annotations.HasLinkerAttribute<ILLink.RequiresUnreferencedCodeAttribute> (method))
 				Context.LogWarning (new DiagnosticString (DiagnosticId.RequiresUnreferencedCodeOnStaticConstructor).GetMessage (method.GetDisplayName ()), (int) DiagnosticId.RequiresUnreferencedCodeOnStaticConstructor, ScopeStack.CurrentScope.Origin, MessageSubCategory.TrimAnalysis);
 
 			if (method.IsConstructor) {

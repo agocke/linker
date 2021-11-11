@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using ILLink;
 using ILLink.Shared;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -39,7 +40,7 @@ namespace Mono.Linker.Dataflow
 
 			return GetIntrinsicIdForMethod (methodDefinition) > IntrinsicId.RequiresReflectionBodyScanner_Sentinel ||
 				context.Annotations.FlowAnnotations.RequiresDataFlowAnalysis (methodDefinition) ||
-				context.Annotations.DoesMethodRequireUnreferencedCode (methodDefinition, out _) ||
+				context.AnalysisContext.DoesMethodRequireUnreferencedCode (new MethodProxy(methodDefinition), out _) ||
 				methodDefinition.IsPInvokeImpl;
 		}
 
